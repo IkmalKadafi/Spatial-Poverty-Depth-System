@@ -317,6 +317,112 @@ class ModelService:
             "F1-Score": f1_score(y_true, y_pred),
         }
 
+    def simulate_single_prediction(
+        self,
+        input_values: Dict[str, float],
+        model_name: str,
+        region_name: str = None,
+        threshold: float = 0.5,
+    ) -> Dict[str, Any]:
+        """
+        Simulate prediction for a single hypothetical observation.
+
+        Parameters
+        ----------
+        input_values : dict
+            Keys are feature column names, values are raw (unstandardized) floats.
+        model_name : str
+            One of the keys in self.model_mapping.
+        region_name : str, optional
+            Only used for GWLR / MGWLR to select the local coefficient row.
+        threshold : float
+            Classification cut-off (default 0.5).
+
+        Returns
+        -------
+        dict with keys: probability, pred_class, label, standardized_values
+        """
+        from sklearn.preprocessing import StandardScaler as _SS
+
+        model = self.load_model(model_name)
+        filename = self.model_mapping.get(model_name, model_name)
+
+        # ── Global Logistic Regression ────────────────────────────────────────
+        if filename == "model_logistik_global.pkl":
+            feature_cols = ['DepRatio', 'UMK', 'Industri', 'TPT', 'RumahLayak', 'Sanitasi']
+            glr_model  = model['model_log'] if isinstance(model, dict) else model
+            glr_scaler = model['scaler']    if isinstance(model, dict) else None
+
+            x_raw_df = pd.DataFrame([[input_values.get(c, 0.0) for c in feature_cols]], columns=feature_cols)
+
+            if glr_scaler is not None:
+                x_scaled_arr = glr_scaler.transform(x_raw_df)  # DataFrame → no feature-names warning
+            else:
+                x_scaled_arr = x_raw_df.values
+
+            x_df = pd.DataFrame(x_scaled_arr, columns=feature_cols)
+            X    = sm.add_constant(x_df, has_constant='add')
+            prob = float(glr_model.predict(X).iloc[0])
+            pred = int(prob >= threshold)
+            std_values = dict(zip(feature_cols, x_scaled_arr[0]))
+
+        # ── GWLR ──────────────────────────────────────────────────────────────
+        elif filename == "gwlr_model.pkl":
+            params         = model['params']        # (n_regions, n_vars+1)
+            scaler         = model['scaler']
+            predictor_cols = model['predictor']  # 6 vars (no intercept col)
+
+            regions  = self.get_region_order()
+            row_idx  = regions.index(region_name) if region_name and region_name in regions else 0
+
+            x_raw_df = pd.DataFrame([[input_values.get(c, 0.0) for c in predictor_cols]], columns=predictor_cols)
+            x_scaled = scaler.transform(x_raw_df)     # DataFrame → no feature-names warning
+            std_values = dict(zip(predictor_cols, x_scaled[0]))
+
+            coef_row = params[row_idx]               # [intercept, β1, …, β6]
+            eta  = coef_row[0] + x_scaled[0] @ coef_row[1:]
+            prob = float(1 / (1 + np.exp(-eta)))
+            pred = int(prob >= threshold)
+
+        # ── MGWLR ─────────────────────────────────────────────────────────────
+        elif filename == "mgwlr_model.pkl":
+            X_local_cols  = model.get('X_local', ['DepRatio', 'RumahLayak', 'Sanitasi'])
+            Z_global_cols = model.get('Z_global', ['UMK', 'Industri', 'TPT'])
+            Beta_Local    = model['Beta_Local']
+            gamma         = model['res_global'].params
+
+            regions  = self.get_region_order()
+            row_idx  = regions.index(region_name) if region_name and region_name in regions else 0
+
+            x_local_df  = pd.DataFrame([[input_values.get(c, 0.0) for c in X_local_cols]],  columns=X_local_cols)
+            z_global_df = pd.DataFrame([[input_values.get(c, 0.0) for c in Z_global_cols]], columns=Z_global_cols)
+
+            scaler_X = model.get('Scaler_X_local') or model.get('scaler_X')
+            scaler_Z = model.get('Scaler_Z_global') or model.get('scaler_Z')
+
+            x_local_scaled  = scaler_X.transform(x_local_df)  if scaler_X else x_local_df.values   # DataFrame → no warning
+            z_global_scaled = scaler_Z.transform(z_global_df) if scaler_Z else z_global_df.values
+
+            std_values = {
+                **dict(zip(X_local_cols,  x_local_scaled[0])),
+                **dict(zip(Z_global_cols, z_global_scaled[0])),
+            }
+
+            eta  = gamma[0] + z_global_scaled[0] @ gamma[1:] + x_local_scaled[0] @ Beta_Local[row_idx]
+            prob = float(1 / (1 + np.exp(-eta)))
+            pred = int(prob >= threshold)
+
+        else:
+            raise ValueError(f"Simulate not supported for model: {model_name}")
+
+        label = "Tinggi (Kelas 1)" if pred == 1 else "Rendah (Kelas 0)"
+        return {
+            "probability":        prob,
+            "pred_class":         pred,
+            "label":              label,
+            "standardized_values": std_values,
+        }
+
     def get_region_order(self) -> List[str]:
         """Return region names in shapefile ORDER (matches GWLR/MGWLR row order)."""
         shapefile_path = Path(__file__).parent.parent / "Geodata Jawa Tengah" / "JawaTengah.shp"

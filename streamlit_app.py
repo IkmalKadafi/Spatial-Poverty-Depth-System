@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from pathlib import Path
+from typing import Dict
 import folium
 from branca.colormap import LinearColormap
 import streamlit.components.v1 as components
@@ -27,8 +28,8 @@ st.markdown("""
 with st.sidebar:
     page = option_menu(
         menu_title="Menu Navigasi",
-        options=["Homepage", "Import & Exploration", "Prediction"],
-        icons=["house", "cloud-upload", "graph-up-arrow"],
+        options=["Homepage", "Import & Exploration", "Prediction", "Simulation"],
+        icons=["house", "cloud-upload", "graph-up-arrow", "sliders"],
         menu_icon="cast",
         default_index=0,
         styles={
@@ -45,7 +46,7 @@ with st.sidebar:
 # ── PAGE: HOMEPAGE ────────────────────────────────────────────────────────────
 
 if page == "Homepage":
-    st.markdown('<div class="main-header">📊 Poverty Depth Index Spatial Analysis</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header">Poverty Depth Index Spatial Analysis</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">Sistem Analitik Spasial untuk Provinsi Jawa Tengah</div>', unsafe_allow_html=True)
     st.divider()
 
@@ -73,7 +74,7 @@ if page == "Homepage":
         """)
 
     st.write("")
-    with st.expander("ℹ️ Tentang Aplikasi Ini", expanded=True):
+    with st.expander("Tentang Aplikasi Ini", expanded=True):
         st.write("""
         Aplikasi ini dikembangkan untuk mempermudah analisis spasial terkait kemiskinan di Jawa Tengah.
         Menggabungkan analisis statistik deskriptif dan pemodelan prediktif spasial untuk memberikan wawasan yang lebih mendalam.
@@ -85,10 +86,10 @@ if page == "Homepage":
 # ── PAGE: IMPORT & EXPLORATION ────────────────────────────────────────────────
 
 elif page == "Import & Exploration":
-    st.markdown('<div class="main-header"> Import & Eksplorasi Data</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header">Import & Eksplorasi Data</div>', unsafe_allow_html=True)
 
     with st.sidebar:
-        st.header("📁 Import Data")
+        st.header("Import Data")
         uploaded_file = st.file_uploader(
             "Upload CSV atau Excel file",
             type=['csv', 'xlsx', 'xls'],
@@ -106,16 +107,16 @@ elif page == "Import & Exploration":
 
                 merge_stats = data_service.get_merge_statistics()
                 st.success("✅ File uploaded successfully!")
-                st.info(f"📊 {len(df)} rows × {len(df.columns)} columns")
+                st.info(f"{len(df)} rows × {len(df.columns)} columns")
                 if merge_stats:
-                    st.info(f"🗺️ Geodata merge: {merge_stats.get('matched_regions', 0)}/{merge_stats.get('total_geodata_regions', 0)} regions ({merge_stats.get('match_rate', 0)}%)")
+                    st.info(f"Geodata merge: {merge_stats.get('matched_regions', 0)}/{merge_stats.get('total_geodata_regions', 0)} regions ({merge_stats.get('match_rate', 0)}%)")
             except Exception as e:
                 st.error(f"❌ Error loading file: {e}")
 
         st.divider()
         selected_variable = None
         if 'data' in st.session_state:
-            st.header("🔍 Filter Variabel")
+            st.header("Filter Variabel")
             numeric_cols = data_service.get_numeric_columns()
             if numeric_cols:
                 selected_variable = st.selectbox("Pilih Variabel:", options=numeric_cols, key='selected_variable')
@@ -127,11 +128,11 @@ elif page == "Import & Exploration":
     if 'data' in st.session_state:
         df = st.session_state['data']
 
-        st.header("📋 Data Table Viewer")
+        st.header("Data Table Viewer")
         st.dataframe(df, use_container_width=True, height=400)
 
         if selected_variable:
-            st.header("📈 Statistik Deskriptif")
+            st.header("Statistik Deskriptif")
             try:
                 stats = stats_service.get_statistics(selected_variable)
                 c1, c2, c3, c4, c5 = st.columns(5)
@@ -143,7 +144,7 @@ elif page == "Import & Exploration":
             except Exception as e:
                 st.error(f"Error calculating statistics: {e}")
 
-            st.header("🗺️ Visualisasi Data")
+            st.header("Visualisasi Data")
             col_map, col_chart = st.columns([2, 1])
 
             with col_map:
@@ -200,7 +201,7 @@ elif page == "Import & Exploration":
                 except Exception as e:
                     st.error(f"Error creating chart: {e}")
     else:
-        st.info("👆 Silakan upload file CSV atau Excel di menu sidebar untuk memulai.")
+        st.info("Silakan upload file CSV atau Excel di menu sidebar untuk memulai.")
 
 
 # ── PAGE: PREDICTION ──────────────────────────────────────────────────────────
@@ -208,17 +209,17 @@ elif page == "Import & Exploration":
 elif page == "Prediction":
     st.title("Pemodelan")
 
+    with st.sidebar:
+        st.divider()
+        st.header("Konfigurasi Model")
+        selected_model = st.selectbox("Pilih Model:", model_service.get_available_models())
+        st.write("")
+        run_button = st.button("Run Prediction", type="primary", use_container_width=True)
+
     if 'data' not in st.session_state:
         st.warning("⚠️ Silakan import data terlebih dahulu di halaman 'Import & Exploration'.")
     else:
         df = st.session_state['data']
-
-        with st.sidebar:
-            st.divider()
-            st.header("⚙️ Konfigurasi Model")
-            selected_model = st.selectbox("Pilih Model:", model_service.get_available_models())
-            st.write("")
-            run_button = st.button("🚀 Run Prediction", type="primary", use_container_width=True)
 
         if run_button:
             with st.spinner(f"Menjalankan dengan {selected_model}..."):
@@ -233,11 +234,11 @@ elif page == "Prediction":
             preds = st.session_state['predictions']
             probs = st.session_state['probabilities']
 
-            st.subheader("📊 Hasil Pemodelan")
+            st.subheader("Hasil Pemodelan")
             st.info(f"Rata-rata Probabilitas: {probs.mean():.4f}")
 
             # ── Parameter Estimation Table ────────────────────────────────
-            st.markdown("#### 📋 Tabel Pendugaan Parameter Model")
+            st.markdown("#### Tabel Pendugaan Parameter Model")
 
             filename = model_service.model_mapping.get(selected_model, selected_model)
             is_gwlr = filename == "gwlr_model.pkl"
@@ -289,7 +290,22 @@ elif page == "Prediction":
                 return m
 
             with col_map:
+                # Robust region column detection with multiple fallback strategies
                 region_col = data_service.region_column
+                if not region_col:
+                    _candidates = ['kabupaten_kota', 'kabupaten/kota', 'region', 'wilayah',
+                                   'daerah', 'kota', 'kabupaten', 'namobj', 'nama']
+                    region_col = next(
+                        (c for c in df.columns if c.lower() in _candidates),
+                        None
+                    )
+                if not region_col:
+                    # Last resort: first object/string column
+                    region_col = next(
+                        (c for c in df.columns if df[c].dtype == object),
+                        None
+                    )
+
                 if region_col:
                     df_viz = df.copy()
                     df_viz['Pred_Class_Logit'] = preds
@@ -298,7 +314,7 @@ elif page == "Prediction":
                     try:
                         bounds = geo_service.get_geodata_info()['bounds']
 
-                        st.markdown("### 🗺️ Peta Sebaran Kelas Prediksi")
+                        st.markdown("### Peta Sebaran Kelas Prediksi")
                         with st.spinner("Membuat Peta Prediksi..."):
                             cdata = geo_service.create_choropleth_data(df_viz, 'Pred_Class_Logit', region_col)
                             cm_class = LinearColormap(colors=['#2c7bb6', '#d7191c'], vmin=0, vmax=1, caption='Pred_Class_Logit (0 vs 1)')
@@ -306,7 +322,7 @@ elif page == "Prediction":
                             components.html(m1._repr_html_(), height=500)
 
                         st.write("")
-                        st.markdown("### 🗺️ Peta Sebaran Probabilitas")
+                        st.markdown("### Peta Sebaran Probabilitas")
                         with st.spinner("Membuat Peta Probabilitas..."):
                             cdata_prob = geo_service.create_choropleth_data(df_viz, 'Pred_Prob_Logit', region_col)
                             cm_prob = LinearColormap(colors=['#ffffcc', '#a1dab4', '#41b6c4', '#2c7fb8', '#253494'], vmin=0, vmax=1, caption='Pred_Prob_Logit (Probabilitas)')
@@ -317,8 +333,9 @@ elif page == "Prediction":
                 else:
                     st.warning("Tidak dapat mendeteksi kolom wilayah untuk peta.")
 
+
             with col_metrics:
-                st.markdown("### 📏 Evaluasi Model")
+                st.markdown("### Evaluasi Model")
                 ground_truth_col = next((c for c in ['p1_encoded', 'P1_encoded'] if c in df.columns), None)
                 if ground_truth_col:
                     try:
@@ -331,7 +348,7 @@ elif page == "Prediction":
                     st.warning("⚠️ Kolom `p1_encoded` tidak ditemukan. Evaluasi tidak tersedia.")
 
                 st.divider()
-                st.markdown("### 📋 Tabel Hasil Prediksi")
+                st.markdown("### Tabel Hasil Prediksi")
                 region_col = data_service.region_column or 'Region'
                 result_df = pd.DataFrame({'Pred Prob Logit': probs, 'Pred Class Logit': preds})
 
@@ -353,7 +370,7 @@ elif page == "Prediction":
 
             # Recommendations
             with st.container():
-                st.markdown("### 💡 Rekomendasi Kebijakan")
+                st.markdown("### Rekomendasi Kebijakan")
                 rec_df = pd.DataFrame({'Region': result_df[result_df.columns[0]], 'Class': result_df['Pred Class Logit']})
                 total_regions = len(rec_df)
                 class_1_count = (rec_df['Class'] == 1).sum()
@@ -378,12 +395,12 @@ elif page == "Prediction":
                     for i, r in enumerate(regions):
                         cols[i % 5].markdown(f"• {r}")
 
-                with st.expander(f"🚨 **Daerah Prioritas Tinggi** ({class_1_count})", expanded=True):
+                with st.expander(f"Daerah Prioritas Tinggi ({class_1_count})", expanded=True):
                     if class_1_count > 0:
                         st.markdown("**Daftar Daerah:**")
                         _show_regions(class_1_regions)
                         st.markdown("---")
-                        st.markdown("""#### 🎯 Rekomendasi Intervensi
+                        st.markdown("""#### Rekomendasi Intervensi
 **1. Bantuan Sosial Intensif**
 - Tingkatkan cakupan bansos dan validasi data penerima.
 - Prioritaskan keluarga rentan dengan dependency ratio tinggi.
@@ -398,12 +415,12 @@ elif page == "Prediction":
                     else:
                         st.success("✅ Tidak ada!")
 
-                with st.expander(f"✅ **Daerah Status Baik** ({class_0_count})", expanded=True):
+                with st.expander(f"Daerah Status Baik ({class_0_count})", expanded=True):
                     if class_0_count > 0:
                         st.markdown("**Daftar Daerah:**")
                         _show_regions(class_0_regions)
                         st.markdown("---")
-                        st.markdown("""#### 🎯 Rekomendasi Pemeliharaan
+                        st.markdown("""#### Rekomendasi Pemeliharaan
 **1. Pertahankan Program**
 - Lanjutkan program efektif dan dokumentasikan praktik baik.
 
@@ -417,13 +434,388 @@ elif page == "Prediction":
                     else:
                         st.warning("⚠️ Perlu perhatian!")
 
-                with st.expander("📋 **Rekomendasi Umum**", expanded=True):
-                    st.markdown("""#### 🔄 Monitoring & Evaluasi
+                with st.expander("Rekomendasi Umum", expanded=True):
+                    st.markdown("""#### Monitoring & Evaluasi
 **1. Update Data Berkala**: Lakukan pengumpulan data minimal 6 bulan sekali.
 **2. Evaluasi Program**: Ukur dampak program terhadap indikator kemiskinan secara rutin.
 **3. Kolaborasi**: Sinergi program antara pemerintah provinsi, kabupaten, dan desa.
 **4. Analisis Spasial**: Manfaatkan peta kerawanan untuk targeting program yang lebih presisi.""")
 
+
+
+# ── PAGE: SIMULATION ──────────────────────────────────────────────────────────
+
+elif page == "Simulation":
+    st.markdown('<div class="main-header">Simulation Process</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Simulasi prediksi fleksibel dengan parameter yang dapat dikonfigurasi</div>', unsafe_allow_html=True)
+    st.divider()
+
+    # ── Sidebar controls (shared across tabs) ─────────────────────────────────
+    with st.sidebar:
+        st.divider()
+        st.header("Konfigurasi Simulasi")
+
+        sim_model = st.selectbox(
+            "Pilih Model:",
+            model_service.get_available_models(),
+            key='sim_model',
+        )
+
+        sim_filename = model_service.model_mapping.get(sim_model, sim_model)
+        is_spatial   = sim_filename in ("gwlr_model.pkl", "mgwlr_model.pkl")
+
+        sim_region = None
+        if is_spatial:
+            regions_list = model_service.get_region_order()
+            sim_region   = st.selectbox("Pilih Wilayah:", regions_list, key='sim_region')
+            if sim_filename == "mgwlr_model.pkl":
+                st.caption("ℹ️ Koefisien lokal mengikuti wilayah yang dipilih.")
+            else:
+                st.caption("ℹ️ Semua koefisien bersifat lokal.")
+
+        sim_threshold = st.slider(
+            "Threshold Klasifikasi",
+            min_value=0.0, max_value=1.0, value=0.5, step=0.01,
+            help="Probabilitas ≥ threshold = Kelas 1 (Tinggi)",
+            key='sim_threshold',
+        )
+
+    # ── Variable input sliders (used in Tab 1 & Tab 3) ────────────────────────
+    VAR_CONFIG = {
+        'DepRatio':   {"label": "Dependency Ratio (%)",         "min": 0.0,   "max": 100.0, "default": 45.0,   "step": 0.1,    "format": "%.1f"},
+        'UMK':        {"label": "UMK (Rp)",                    "min": 1000000.0, "max": 5000000.0, "default": 2000000.0, "step": 50000.0, "format": "%.0f"},
+        'Industri':   {"label": "Jumlah Industri (unit)",           "min": 0.0,   "max": 5000.0, "default": 500.0, "step": 10.0,   "format": "%.0f"},
+        'TPT':        {"label": "Tingkat Pengangguran Terbuka (%)", "min": 0.0, "max": 20.0, "default": 5.0,   "step": 0.1,   "format": "%.1f"},
+        'RumahLayak': {"label": "Rumah Layak Huni (%)",          "min": 0.0,   "max": 100.0, "default": 75.0,   "step": 0.1,   "format": "%.1f"},
+        'Sanitasi':   {"label": "Sanitasi Layak (%)",            "min": 0.0,   "max": 100.0, "default": 75.0,   "step": 0.1,   "format": "%.1f"},
+    }
+
+    # ── TABS ──────────────────────────────────────────────────────────────────
+    tab1, tab2, tab3 = st.tabs([
+        "Single Region What-If",
+        "Bulk Prediction",
+        "Model Comparison",
+    ])
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # TAB 1 – Single Region What-If
+    # ══════════════════════════════════════════════════════════════════════════
+    with tab1:
+        st.markdown("### Simulasi What-If — Satu Wilayah")
+        st.info(
+            "Ubah nilai variabel X di bawah ini, lalu klik **Jalankan Simulasi**. "
+            "Data akan distandardisasi otomatis sebelum dimasukkan ke model."
+        )
+
+        # Input sliders
+        with st.form(key='sim_form_single'):
+            st.markdown("#### Input Nilai Variabel (Skala Asli)")
+            col_a, col_b = st.columns(2)
+            input_vals: Dict[str, float] = {}
+
+            var_items = list(VAR_CONFIG.items())
+            for i, (var, cfg) in enumerate(var_items):
+                target_col = col_a if i % 2 == 0 else col_b
+                with target_col:
+                    input_vals[var] = st.slider(
+                        cfg["label"],
+                        min_value=float(cfg["min"]),
+                        max_value=float(cfg["max"]),
+                        value=float(cfg["default"]),
+                        step=float(cfg["step"]),
+                        format=cfg["format"],
+                        key=f'single_{var}',
+                    )
+
+            run_single = st.form_submit_button("Jalankan Simulasi", type="primary", use_container_width=True)
+
+        if run_single:
+            try:
+                result = model_service.simulate_single_prediction(
+                    input_values=input_vals,
+                    model_name=sim_model,
+                    region_name=sim_region,
+                    threshold=sim_threshold,
+                )
+                st.session_state['sim_result_single'] = result
+                st.session_state['sim_input_single']  = dict(input_vals)
+            except Exception as e:
+                st.error(f"❌ Simulasi gagal: {e}")
+
+        if 'sim_result_single' in st.session_state:
+            res   = st.session_state['sim_result_single']
+            prob  = res['probability']
+            pred  = res['pred_class']
+            label = res['label']
+            std_v = res['standardized_values']
+
+            st.divider()
+            st.markdown("### Hasil Simulasi")
+
+            # Probability gauge using progress bar + metric
+            c1, c2, c3 = st.columns([1, 1, 1])
+            with c1:
+                st.metric("Probabilitas Kemiskinan", f"{prob:.4f}")
+                st.progress(prob)
+            with c2:
+                emoji = "🔴" if pred == 1 else "🟢"
+                st.metric("Prediksi Kelas", f"{emoji} {label}")
+            with c3:
+                st.metric("Threshold Digunakan", f"{sim_threshold:.2f}")
+                if is_spatial:
+                    st.metric("Wilayah", sim_region or "—")
+
+            # Standardized values table
+            with st.expander("Nilai Setelah Standardisasi (yang masuk ke model)", expanded=False):
+                std_df = pd.DataFrame.from_dict(
+                    std_v, orient='index', columns=['Nilai Terstandarisasi']
+                ).rename_axis('Variabel').reset_index()
+                raw_s  = st.session_state['sim_input_single']
+                std_df.insert(1, 'Nilai Asli', [raw_s.get(v, '-') for v in std_df['Variabel']])
+                st.dataframe(std_df, hide_index=True, use_container_width=True)
+
+            # Interpretation card
+            st.divider()
+            if pred == 1:
+                st.error(
+                    f"⚠️ **Interpretasi:** Berdasarkan nilai variabel yang diinput, wilayah ini "
+                    f"diprediksi memiliki **Indeks Kedalaman Kemiskinan TINGGI** "
+                    f"(probabilitas: {prob:.2%}) menggunakan model **{sim_model}**."
+                )
+            else:
+                st.success(
+                    f"✅ **Interpretasi:** Berdasarkan nilai variabel yang diinput, wilayah ini "
+                    f"diprediksi memiliki **Indeks Kedalaman Kemiskinan RENDAH** "
+                    f"(probabilitas: {prob:.2%}) menggunakan model **{sim_model}**."
+                )
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # TAB 2 – Bulk Prediction
+    # ══════════════════════════════════════════════════════════════════════════
+    with tab2:
+        st.markdown("### Bulk Prediction — Semua Wilayah")
+
+        if 'data' not in st.session_state:
+            st.warning("⚠️ Silakan import data terlebih dahulu di halaman **Import & Exploration**.")
+        else:
+            df_bulk = st.session_state['data']
+            st.info(
+                f"Dataset aktif: **{st.session_state.get('file_name', 'data')}** "
+                f"({len(df_bulk)} baris × {len(df_bulk.columns)} kolom).  \n"
+                "Data akan distandardisasi otomatis menggunakan scaler dari model."
+            )
+
+            run_bulk = st.button("Jalankan Bulk Prediction", type="primary", key='run_bulk')
+
+            if run_bulk:
+                with st.spinner(f"Menjalankan {sim_model} pada seluruh data..."):
+                    try:
+                        preds_b, probs_b = model_service.predict(df_bulk, sim_model)
+                        # Apply custom threshold
+                        preds_b = (probs_b >= sim_threshold).astype(int)
+                        st.session_state['bulk_preds'] = preds_b
+                        st.session_state['bulk_probs'] = probs_b
+                        st.session_state['bulk_model'] = sim_model
+                        st.success("✅ Prediksi selesai!")
+                    except Exception as e:
+                        st.error(f"❌ Prediksi gagal: {e}")
+
+            if 'bulk_preds' in st.session_state:
+                preds_b = st.session_state['bulk_preds']
+                probs_b = st.session_state['bulk_probs']
+
+                region_col_b = data_service.region_column
+                result_bulk  = pd.DataFrame({'Probabilitas': probs_b.round(4), 'Kelas Prediksi': preds_b})
+                if region_col_b and region_col_b in df_bulk.columns:
+                    result_bulk.insert(0, 'Kabupaten/Kota', df_bulk[region_col_b].values)
+
+                # Summary metrics
+                c1, c2, c3, c4 = st.columns(4)
+                n_tot  = len(preds_b)
+                n_cls1 = int((preds_b == 1).sum())
+                n_cls0 = int((preds_b == 0).sum())
+                c1.metric("Total Wilayah", n_tot)
+                c2.metric("Kelas 1 (Tinggi)", n_cls1, delta=f"{n_cls1/n_tot*100:.1f}%", delta_color="inverse")
+                c3.metric("Kelas 0 (Rendah)", n_cls0, delta=f"{n_cls0/n_tot*100:.1f}%", delta_color="normal")
+                c4.metric("Threshold", f"{sim_threshold:.2f}")
+
+                st.divider()
+                col_tbl, col_chart = st.columns([1, 1])
+
+                with col_tbl:
+                    st.markdown("#### Tabel Hasil")
+                    def _highlight_class(row):
+                        return ['background-color: #ffd6d6' if row['Kelas Prediksi'] == 1
+                                else 'background-color: #d6ffd6'] * len(row)
+                    st.dataframe(
+                        result_bulk.style.apply(_highlight_class, axis=1),
+                        hide_index=True, use_container_width=True, height=500,
+                    )
+
+                with col_chart:
+                    st.markdown("#### Top 10 Probabilitas Tertinggi")
+                    if 'Kabupaten/Kota' in result_bulk.columns:
+                        top10 = result_bulk.nlargest(10, 'Probabilitas')
+                        fig_bulk = px.bar(
+                            top10, y='Kabupaten/Kota', x='Probabilitas', orientation='h',
+                            color='Probabilitas', color_continuous_scale='Reds',
+                            title='Top 10 Wilayah – Probabilitas Kemiskinan',
+                        )
+                        fig_bulk.update_layout(height=500, showlegend=False, yaxis={'categoryorder': 'total ascending'})
+                        fig_bulk.add_vline(x=sim_threshold, line_dash='dash', line_color='black',
+                                           annotation_text=f"Threshold={sim_threshold:.2f}")
+                        st.plotly_chart(fig_bulk, use_container_width=True)
+
+                    # Choropleth map if geodata available
+                    try:
+                        df_map = df_bulk.copy()
+                        df_map['Prob_Simulasi'] = probs_b.values
+                        if region_col_b:
+                            bounds    = geo_service.get_geodata_info()['bounds']
+                            cdata_sim = geo_service.create_choropleth_data(df_map, 'Prob_Simulasi', region_col_b)
+                            cm_sim    = LinearColormap(
+                                colors=['#ffffcc', '#fd8d3c', '#bd0026'],
+                                vmin=0, vmax=1, caption='Probabilitas Kemiskinan',
+                            )
+                            center_b = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
+                            m_bulk   = folium.Map(location=center_b, zoom_start=8, tiles='OpenStreetMap')
+                            folium.GeoJson(
+                                cdata_sim['geojson'],
+                                style_function=lambda f: {
+                                    'fillColor': cm_sim(f['properties']['Prob_Simulasi'])
+                                                 if f['properties'].get('Prob_Simulasi') is not None else '#cccccc',
+                                    'color': 'white', 'weight': 1, 'fillOpacity': 0.75,
+                                },
+                                tooltip=folium.GeoJsonTooltip(
+                                    fields=['NAMOBJ', 'Prob_Simulasi'],
+                                    aliases=['Wilayah:', 'Probabilitas:'],
+                                    localize=True,
+                                ),
+                            ).add_to(m_bulk)
+                            cm_sim.add_to(m_bulk)
+                            m_bulk.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
+                            st.markdown("#### Peta Probabilitas Kemiskinan")
+                            components.html(m_bulk._repr_html_(), height=450)
+                    except Exception:
+                        pass  # Map is optional; skip silently
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # TAB 3 – Model Comparison
+    # ══════════════════════════════════════════════════════════════════════════
+    with tab3:
+        st.markdown("### Perbandingan Antar Model")
+        st.info(
+            "Input nilai variabel X yang sama akan dijalankan pada **ketiga model** sekaligus. "
+            "Data akan distandardisasi sesuai scaler masing-masing model."
+        )
+
+        with st.form(key='sim_form_compare'):
+            st.markdown("#### Input Nilai Variabel (Skala Asli)")
+
+            # Region selector for spatial models
+            regions_cmp = model_service.get_region_order()
+            cmp_region  = st.selectbox(
+                "Pilih Wilayah (untuk GWLR & MGWLR):",
+                regions_cmp, key='cmp_region',
+            )
+
+            col_c, col_d = st.columns(2)
+            cmp_vals: Dict[str, float] = {}
+            var_items_cmp = list(VAR_CONFIG.items())
+            for i, (var, cfg) in enumerate(var_items_cmp):
+                target_col = col_c if i % 2 == 0 else col_d
+                with target_col:
+                    cmp_vals[var] = st.slider(
+                        cfg["label"],
+                        min_value=float(cfg["min"]),
+                        max_value=float(cfg["max"]),
+                        value=float(cfg["default"]),
+                        step=float(cfg["step"]),
+                        format=cfg["format"],
+                        key=f'cmp_{var}',
+                    )
+
+            run_cmp = st.form_submit_button("Bandingkan Semua Model", type="primary", use_container_width=True)
+
+        if run_cmp:
+            cmp_results = []
+            all_models  = model_service.get_available_models()
+            with st.spinner("Menjalankan simulasi pada ketiga model..."):
+                for mname in all_models:
+                    mfile = model_service.model_mapping.get(mname, mname)
+                    use_region = cmp_region if mfile in ("gwlr_model.pkl", "mgwlr_model.pkl") else None
+                    try:
+                        r = model_service.simulate_single_prediction(
+                            input_values=cmp_vals,
+                            model_name=mname,
+                            region_name=use_region,
+                            threshold=sim_threshold,
+                        )
+                        cmp_results.append({
+                            'Model':        mname,
+                            'Probabilitas': round(r['probability'], 4),
+                            'Kelas':        r['pred_class'],
+                            'Label':        r['label'],
+                            'Wilayah Ref':  use_region or '—',
+                        })
+                    except Exception as e:
+                        cmp_results.append({
+                            'Model':        mname,
+                            'Probabilitas': None,
+                            'Kelas':        None,
+                            'Label':        f'Error: {e}',
+                            'Wilayah Ref':  use_region or '—',
+                        })
+            st.session_state['cmp_results'] = cmp_results
+
+        if 'cmp_results' in st.session_state:
+            cmp_res = st.session_state['cmp_results']
+            cmp_df  = pd.DataFrame(cmp_res)
+
+            st.divider()
+            st.markdown("### Hasil Perbandingan")
+            st.markdown(f"**Threshold:** `{sim_threshold:.2f}` | **Wilayah (GWLR/MGWLR):** `{cmp_region}`")
+
+            def _highlight_cmp(row):
+                if row['Kelas'] == 1:
+                    return ['background-color: #ffd6d6'] * len(row)
+                elif row['Kelas'] == 0:
+                    return ['background-color: #d6ffd6'] * len(row)
+                return [''] * len(row)
+
+            st.dataframe(
+                cmp_df[['Model', 'Probabilitas', 'Kelas', 'Label', 'Wilayah Ref']]
+                     .style.apply(_highlight_cmp, axis=1),
+                hide_index=True, use_container_width=True,
+            )
+
+            # Bar chart comparison
+            valid_cmp = cmp_df.dropna(subset=['Probabilitas'])
+            if not valid_cmp.empty:
+                fig_cmp = px.bar(
+                    valid_cmp, x='Model', y='Probabilitas',
+                    color='Probabilitas', color_continuous_scale='RdYlGn_r',
+                    title='Perbandingan Probabilitas Antar Model',
+                    text='Probabilitas',
+                )
+                fig_cmp.update_traces(texttemplate='%{text:.4f}', textposition='outside')
+                fig_cmp.add_hline(y=sim_threshold, line_dash='dash', line_color='black',
+                                  annotation_text=f"Threshold = {sim_threshold:.2f}")
+                fig_cmp.update_layout(height=400, xaxis_title='Model', yaxis_title='Probabilitas', yaxis_range=[0, 1.1])
+                st.plotly_chart(fig_cmp, use_container_width=True)
+
+            # Agreement analysis
+            valid_classes = cmp_df['Kelas'].dropna()
+            if len(valid_classes) > 1:
+                st.divider()
+                n_agree = int((valid_classes == valid_classes.iloc[0]).sum())
+                if n_agree == len(valid_classes):
+                    st.success(f"✅ **Konsensus:** Semua model sepakat — **{cmp_df.iloc[0]['Label']}**")
+                else:
+                    st.warning(
+                        f"⚠️ **Tidak Konsensus:** Model berbeda pendapat. "
+                        f"{n_agree}/{len(valid_classes)} model memprediksi kelas yang sama."
+                    )
 
 
 st.divider()
