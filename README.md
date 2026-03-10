@@ -68,7 +68,7 @@ python -c "import streamlit; import pandas; import geopandas; import folium; imp
 
 2. **Navigasi ke folder project:**
    ```bash
-   cd "d:\Kadafi workspace\Entropiata Agency\GUI Skripsi\Thesis-GUI-"
+   cd "d:\(folder_clone)\Spatial-Poverty-Depth-System"
    ```
 
 3. **Jalankan Streamlit:**
@@ -80,17 +80,17 @@ python -c "import streamlit; import pandas; import geopandas; import folium; imp
    ```
    You can now view your Streamlit app in your browser.
 
-   Local URL: http://localhost:8501
-   Network URL: http://192.168.x.x:8501
+   Local URL: http://localhost:85xx
+   Network URL: http://192.168.x.x:85xx
    ```
 
-5. **Browser akan otomatis terbuka** ke `http://localhost:8501`
+5. **Browser akan otomatis terbuka** ke `http://localhost:85xx`
    - Jika tidak otomatis, buka browser dan ketik URL tersebut
 
 ### Metode 2: PowerShell (Windows)
 
 ```powershell
-cd "d:\Kadafi workspace\Entropiata Agency\GUI Skripsi\Thesis-GUI-"
+cd "d:\(folder_clone)\Spatial-Poverty-Depth-System"
 streamlit run streamlit_app.py
 ```
 
@@ -108,7 +108,7 @@ streamlit run streamlit_app.py
 ### 1. Upload Data
 
 1. Klik **"Browse files"** di sidebar kiri
-2. Pilih file CSV atau Excel (contoh: `backend/data/sample/JawaTengah.csv`)
+2. Pilih file CSV atau Excel (contoh: `xxx/JawaTengah.csv`)
 3. Tunggu hingga muncul pesan sukses:
    ```
    ✅ File uploaded successfully!
@@ -158,7 +158,7 @@ Bar chart horizontal menampilkan **Top 10 wilayah** berdasarkan variabel yang di
 ## 📁 Struktur Folder
 
 ```
-Thesis-GUI-/
+Spatial-Poverty-Depth-System/
 ├── streamlit_app.py              # Main application file
 ├── backend/
 │   ├── requirements.txt          # Python dependencies
@@ -223,7 +223,7 @@ streamlit run streamlit_app.py --server.port 8502
 
 **Solusi:** Buka manual di browser:
 ```
-http://localhost:8501
+http://localhost:85xx
 ```
 
 ## 🛑 Cara Menghentikan Server
